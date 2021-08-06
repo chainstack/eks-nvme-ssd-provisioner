@@ -12,12 +12,12 @@ FILESYSTEM_BLOCK_SIZE=${FILESYSTEM_BLOCK_SIZE:-4096}  # Bytes
 STRIDE=$((RAID_CHUNK_SIZE * 1024 / FILESYSTEM_BLOCK_SIZE))
 STRIPE_WIDTH=$((SSD_NVME_DEVICE_COUNT * STRIDE))
 
-# Checking if provisioning already happend
+# Checking if provisioning already happened
 if [[ "$(ls -A /pv-disks)" ]]
 then
   echo 'Volumes already present in "/pv-disks"'
   echo -e "\n$(ls -Al /pv-disks | tail -n +2)\n"
-  echo "I assume that provisioning already happend, trying to assemble and mount!"
+  echo "I assume that provisioning already happened, trying to assemble and mount!"
   case $SSD_NVME_DEVICE_COUNT in
   "0")
     exit 1
