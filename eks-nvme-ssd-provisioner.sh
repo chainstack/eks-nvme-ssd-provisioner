@@ -9,8 +9,6 @@ SSD_NVME_DEVICE_COUNT=${#SSD_NVME_DEVICE_LIST[@]}
 RAID_DEVICE=${RAID_DEVICE:-/dev/md0}
 RAID_CHUNK_SIZE=${RAID_CHUNK_SIZE:-512}  # Kilo Bytes
 FILESYSTEM_BLOCK_SIZE=${FILESYSTEM_BLOCK_SIZE:-4096}  # Bytes
-STRIDE=$((RAID_CHUNK_SIZE * 1024 / FILESYSTEM_BLOCK_SIZE))
-STRIPE_WIDTH=$((SSD_NVME_DEVICE_COUNT * STRIDE))
 
 # Checking if provisioning already happened
 if [[ "$(ls -A /pv-disks)" ]]
@@ -52,18 +50,20 @@ case $SSD_NVME_DEVICE_COUNT in
   exit 1
   ;;
 "1")
-  mkfs.ext4 -m 0 -b "$FILESYSTEM_BLOCK_SIZE" "${SSD_NVME_DEVICE_LIST[0]}"
+  mkfs.xfs -b "size=$FILESYSTEM_BLOCK_SIZE" "${SSD_NVME_DEVICE_LIST[0]}"
   DEVICE="${SSD_NVME_DEVICE_LIST[0]}"
   ;;
 *)
+  udevadm control --stop-exec-queue || true
   mdadm --create --verbose "$RAID_DEVICE" --level=0 -c "${RAID_CHUNK_SIZE}" \
     --raid-devices=${#SSD_NVME_DEVICE_LIST[@]} "${SSD_NVME_DEVICE_LIST[@]}"
   while [ -n "$(mdadm --detail "$RAID_DEVICE" | grep -ioE 'State :.*resyncing')" ]; do
     echo "Raid is resyncing.."
     sleep 1
   done
+  udevadm control --start-exec-queue || true
   echo "Raid0 device $RAID_DEVICE has been created with disks ${SSD_NVME_DEVICE_LIST[*]}"
-  mkfs.ext4 -m 0 -b "$FILESYSTEM_BLOCK_SIZE" -E "stride=$STRIDE,stripe-width=$STRIPE_WIDTH" "$RAID_DEVICE"
+  mkfs.xfs -b "size=$FILESYSTEM_BLOCK_SIZE" -d "su=${RAID_CHUNK_SIZE}k" -d "sw=$SSD_NVME_DEVICE_COUNT" "$RAID_DEVICE"
   DEVICE=$RAID_DEVICE
   ;;
 esac
