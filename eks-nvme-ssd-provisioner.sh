@@ -36,7 +36,7 @@ then
   if mount | grep "$DEVICE" > /dev/null; then
     echo "device $DEVICE appears to be mounted already"
   else
-    mount -o defaults,noatime,discard,nobarrier --uuid "$UUID" "/pv-disks/$UUID"
+    mount -o defaults,noatime,discard --uuid "$UUID" "/pv-disks/$UUID"
   fi
   echo "Device $DEVICE has been mounted to /pv-disks/$UUID"
   while sleep 3600; do :; done
